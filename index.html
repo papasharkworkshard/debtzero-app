@@ -797,10 +797,37 @@ input[type=range]::-webkit-slider-thumb:hover {
   <div class="modal">
     <div class="modal-title" id="add-modal-title">Новый кредит</div>
     <div class="field"><label>Название</label><input id="f-name" placeholder="Ипотека, Автокредит..."></div>
-    <div class="field"><label>Остаток долга (₽)</label><input id="f-balance" type="number" placeholder="500000"></div>
+    <div class="field"><label>Начальная сумма долга (₽)</label><input id="f-initial" type="number" placeholder="500000"></div>
+    <div class="field"><label>Остаток долга (₽)</label><input id="f-balance" type="number" placeholder="350000"></div>
     <div class="field"><label>Мин. платёж (₽/мес)</label><input id="f-monthly" type="number" placeholder="15000"></div>
     <div class="field"><label>Ставка (% год)</label><input id="f-rate" type="number" placeholder="19.9"></div>
-    <div class="field"><label>Дата след. платежа</label><input id="f-date" placeholder="15.04.2026"></div>
+    <div class="field">
+      <label>Дата след. платежа</label>
+      <div style="position:relative">
+        <input id="f-date" readonly placeholder="Выбери дату"
+          style="cursor:pointer;padding-right:36px"
+          onclick="toggleCal()">
+        <span style="position:absolute;right:12px;top:50%;transform:translateY(-50%);font-size:16px;pointer-events:none">📅</span>
+      </div>
+      <!-- Календарь -->
+      <div id="cal-popup" style="display:none;margin-top:8px;background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;user-select:none">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid var(--border)">
+          <button onclick="calMove(-1)" style="background:none;border:none;color:var(--text);font-size:18px;cursor:pointer;padding:2px 8px;border-radius:4px">‹</button>
+          <div id="cal-title" style="font-family:'Syne',sans-serif;font-size:13px;font-weight:700;color:var(--white)"></div>
+          <button onclick="calMove(1)"  style="background:none;border:none;color:var(--text);font-size:18px;cursor:pointer;padding:2px 8px;border-radius:4px">›</button>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;padding:8px">
+          <div style="text-align:center;font-size:10px;color:var(--sub);padding:4px">Пн</div>
+          <div style="text-align:center;font-size:10px;color:var(--sub);padding:4px">Вт</div>
+          <div style="text-align:center;font-size:10px;color:var(--sub);padding:4px">Ср</div>
+          <div style="text-align:center;font-size:10px;color:var(--sub);padding:4px">Чт</div>
+          <div style="text-align:center;font-size:10px;color:var(--sub);padding:4px">Пт</div>
+          <div style="text-align:center;font-size:10px;color:var(--sub);padding:4px">Сб</div>
+          <div style="text-align:center;font-size:10px;color:var(--sub);padding:4px">Вс</div>
+          <div id="cal-days" style="display:contents"></div>
+        </div>
+      </div>
+    </div>
     <div class="modal-btns">
       <button class="btn-secondary" onclick="closeModals()">Отмена</button>
       <button class="btn-primary" id="add-submit-btn" onclick="addCredit()">Добавить</button>
@@ -832,18 +859,18 @@ input[type=range]::-webkit-slider-thumb:hover {
 <script>
 // ══ Данные ══
 let credits = [
-  { id:1, name:"Ипотека",        balance:2840000, monthly:28500, rate:11.5, next_date:"12.04.2026", color:"#ff3d5a",
+  { id:1, name:"Ипотека",    initial:3200000, balance:2840000, monthly:28500, rate:11.5, next_date:"12.04.2026", color:"#ff3d5a",
     history:[
       {date:"01.03.2026",amount:30000},{date:"02.03.2026",amount:1500},
       {date:"03.03.2026",amount:2000},{date:"05.03.2026",amount:3500},
       {date:"06.03.2026",amount:1800},{date:"07.03.2026",amount:2200},
     ]},
-  { id:2, name:"Автокредит",     balance:312400,  monthly:9800,  rate:17.0, next_date:"20.04.2026", color:"#ffd166",
+  { id:2, name:"Автокредит", initial:500000,  balance:312400,  monthly:9800,  rate:17.0, next_date:"20.04.2026", color:"#ffd166",
     history:[
       {date:"01.03.2026",amount:10000},{date:"03.03.2026",amount:1000},
       {date:"05.03.2026",amount:1500},{date:"07.03.2026",amount:800},
     ]},
-  { id:3, name:"Сплит",          balance:47200,   monthly:5000,  rate:0,    next_date:"",           color:"#ff3d5a",
+  { id:3, name:"Сплит",      initial:20000,   balance:15000,   monthly:5000,  rate:0,    next_date:"",           color:"#ff3d5a",
     history:[
       {date:"02.03.2026",amount:3000},{date:"04.03.2026",amount:2000},
     ]},
@@ -913,9 +940,8 @@ function render() {
 // ══ Рендер Hero-экрана ══
 function renderHero() {
   const total  = credits.reduce((s,c) => s+c.balance, 0);
-  const paid   = credits.reduce((s,c) => s+paidTotal(c), 0);
-  const orig   = total + paid;
-  const pct    = orig > 0 ? Math.round(paid / orig * 100) : 0;
+  const totalInitial = credits.reduce((s,c) => s+(c.initial || c.balance), 0);
+  const pct    = totalInitial > 0 ? Math.round((totalInitial - total) / totalInitial * 100) : 0;
   const todayAmt = credits.reduce((s,c) => s+paidToday(c), 0);
 
   // Дата
@@ -975,9 +1001,8 @@ function renderHero() {
 
   // Мини-список кредитов
   document.getElementById('hero-credits-list').innerHTML = credits.slice(0,3).map((c,i) => {
-    const pt = paidTotal(c);
-    const o  = c.balance + pt;
-    const p  = o > 0 ? Math.round(pt/o*100) : 0;
+    const orig = c.initial || c.balance;
+    const p  = orig > 0 ? Math.round((orig - c.balance) / orig * 100) : 0;
     return `<div class="mini-cred" onclick="switchToDebts()">
       <div class="mini-cred-dot" style="background:${c.color}"></div>
       <div class="mini-cred-name">${c.name}</div>
@@ -1066,8 +1091,8 @@ function renderCredits() {
     else                      { badge = `📅 ${c.next_date||'нет даты'}`; bclass = 'badge-ok'; }
 
     const pt = paidTotal(c);
-    const orig = c.balance + pt;
-    const pct = orig > 0 ? Math.round(pt/orig*100) : 0;
+    const orig = c.initial || (c.balance + pt);
+    const pct = orig > 0 ? Math.round((orig - c.balance) / orig * 100) : 0;
     const ptd = paidToday(c);
 
     return `
@@ -1087,7 +1112,7 @@ function renderCredits() {
             <div class="progress-track">
               <div class="progress-fill" style="width:${pct}%;background:${c.color}"></div>
             </div>
-            <div class="progress-labels"><span>выплачено ${pct}%</span><span>${fmt(pt)}</span></div>
+            <div class="progress-labels"><span>выплачено ${pct}%</span><span>${fmt(orig - c.balance)}</span></div>
           </div>
           <div class="card-footer">
             <div class="card-date">${c.rate ? `ставка ${c.rate}% · ` : ''}${c.next_date||'дата не указана'}</div>
@@ -1226,6 +1251,7 @@ function editCredit(idx) {
   editingIdx = idx;
   const c = credits[idx];
   document.getElementById('f-name').value    = c.name;
+  document.getElementById('f-initial').value = c.initial || c.balance;
   document.getElementById('f-balance').value = c.balance;
   document.getElementById('f-monthly').value = c.monthly;
   document.getElementById('f-rate').value    = c.rate||'';
@@ -1269,6 +1295,7 @@ function confirmPay() {
 function openAddModal() {
   editingIdx = -1;
   document.getElementById('f-name').value='';
+  document.getElementById('f-initial').value='';
   document.getElementById('f-balance').value='';
   document.getElementById('f-monthly').value='';
   document.getElementById('f-rate').value='';
@@ -1279,17 +1306,19 @@ function openAddModal() {
 }
 function addCredit() {
   const name    = document.getElementById('f-name').value.trim();
+  const initial = parseFloat(document.getElementById('f-initial').value)||0;
   const balance = parseFloat(document.getElementById('f-balance').value)||0;
   const monthly = parseFloat(document.getElementById('f-monthly').value)||0;
   const rate    = parseFloat(document.getElementById('f-rate').value)||0;
   const nd      = document.getElementById('f-date').value.trim();
   if (!name||!balance) return;
+  const initVal = initial >= balance ? initial : balance; // если не заполнил — начальная = остаток
   const colors = ['#ff3d5a','#ffd166','#00e5a0','#4da8ff','#a78bfa'];
   if (editingIdx >= 0) {
-    credits[editingIdx] = {...credits[editingIdx], name, balance, monthly, rate, next_date: nd};
+    credits[editingIdx] = {...credits[editingIdx], name, initial: initVal, balance, monthly, rate, next_date: nd};
   } else {
-    credits.push({id:Date.now(),name,balance,monthly,rate,next_date:nd,
-      color:colors[credits.length%colors.length],history:[]});
+    credits.push({id:Date.now(), name, initial: initVal, balance, monthly, rate, next_date: nd,
+      color: colors[credits.length % colors.length], history: []});
   }
   editingIdx = -1;
   closeModals();
@@ -1298,14 +1327,16 @@ function addCredit() {
 function closeModals(e) {
   if (e && e.target !== e.currentTarget) return;
   document.querySelectorAll('.overlay').forEach(o=>o.classList.remove('show'));
+  const popup = document.getElementById('cal-popup');
+  if (popup) popup.style.display = 'none';
 }
 
 // ══ АНАЛИТИКА ══
 function renderAnalytics() {
   const total   = credits.reduce((s,c)=>s+c.balance,0);
-  const paid    = credits.reduce((s,c)=>s+paidTotal(c),0);
-  const orig    = total+paid;
-  const pct     = orig>0?Math.round(paid/orig*100):0;
+  const totalInitial = credits.reduce((s,c)=>s+(c.initial||c.balance),0);
+  const paid    = totalInitial - total;
+  const pct     = totalInitial>0?Math.round(paid/totalInitial*100):0;
 
   // Средний платёж/день за 30 дней
   const now = new Date(); const ago30 = new Date(now-30*86400000);
@@ -1592,6 +1623,86 @@ function finishOnboard() {
 // Показываем онбординг при загрузке
 window.addEventListener('load', () => {
   renderOnboard();
+});
+
+// ══ Календарь ══
+let calYear, calMonth;
+
+function toggleCal() {
+  const popup = document.getElementById('cal-popup');
+  if (popup.style.display === 'none') {
+    const now = new Date();
+    calYear  = now.getFullYear();
+    calMonth = now.getMonth();
+    // Если уже выбрана дата — открываем на ней
+    const cur = document.getElementById('f-date').value;
+    if (cur) {
+      const [d,m,y] = cur.split('.');
+      calYear = +y; calMonth = +m - 1;
+    }
+    renderCal();
+    popup.style.display = 'block';
+  } else {
+    popup.style.display = 'none';
+  }
+}
+
+function calMove(dir) {
+  calMonth += dir;
+  if (calMonth > 11) { calMonth = 0; calYear++; }
+  if (calMonth < 0)  { calMonth = 11; calYear--; }
+  renderCal();
+}
+
+function renderCal() {
+  const months = ['Январь','Февраль','Март','Апрель','Май','Июнь',
+                  'Июль','Август','Сентябрь','Октябрь','Ноябрь','Декабрь'];
+  document.getElementById('cal-title').textContent = `${months[calMonth]} ${calYear}`;
+
+  const today    = new Date();
+  const selected = document.getElementById('f-date').value;
+  let selDay = 0, selMonth = -1, selYear = -1;
+  if (selected) { const [d,m,y]=selected.split('.'); selDay=+d; selMonth=+m-1; selYear=+y; }
+
+  // Первый день месяца (0=вс, приводим к пн=0)
+  let firstDow = new Date(calYear, calMonth, 1).getDay();
+  firstDow = (firstDow + 6) % 7; // пн = 0
+  const daysInMonth = new Date(calYear, calMonth+1, 0).getDate();
+
+  let html = '';
+  for (let i = 0; i < firstDow; i++) {
+    html += `<div></div>`;
+  }
+  for (let d = 1; d <= daysInMonth; d++) {
+    const isToday = d===today.getDate() && calMonth===today.getMonth() && calYear===today.getFullYear();
+    const isSel   = d===selDay && calMonth===selMonth && calYear===selYear;
+    const isPast  = new Date(calYear, calMonth, d) < new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    html += `<div onclick="pickDay(${d})" style="
+      text-align:center;font-size:12px;padding:6px 2px;border-radius:6px;cursor:pointer;
+      ${isSel   ? 'background:var(--accent);color:#fff;font-weight:700;' : ''}
+      ${isToday && !isSel ? 'border:1px solid var(--accent);color:var(--accent);' : ''}
+      ${isPast  && !isSel ? 'color:var(--sub);' : ''}
+      ${!isSel && !isToday ? 'transition:background .1s;' : ''}
+    " onmouseover="if(!${isSel})this.style.background='var(--border)'"
+       onmouseout="if(!${isSel})this.style.background=''">${d}</div>`;
+  }
+  document.getElementById('cal-days').innerHTML = html;
+}
+
+function pickDay(d) {
+  const ds = String(d).padStart(2,'0') + '.' + String(calMonth+1).padStart(2,'0') + '.' + calYear;
+  document.getElementById('f-date').value = ds;
+  document.getElementById('cal-popup').style.display = 'none';
+}
+
+// Закрываем календарь при клике вне модалки
+document.addEventListener('click', e => {
+  const popup = document.getElementById('cal-popup');
+  if (popup && popup.style.display !== 'none') {
+    if (!popup.contains(e.target) && e.target.id !== 'f-date') {
+      popup.style.display = 'none';
+    }
+  }
 });
 
 // ══ Старт ══
