@@ -1,0 +1,1174 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>DebtZero — убиваем долги</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+
+:root {
+  --bg:       #080810;
+  --surface:  #0e0e1c;
+  --card:     #131325;
+  --border:   #1e1e36;
+  --accent:   #ff3d5a;
+  --green:    #00e5a0;
+  --yellow:   #ffd166;
+  --blue:     #4da8ff;
+  --purple:   #a78bfa;
+  --text:     #e8e8f4;
+  --sub:      #5a5a7a;
+  --white:    #ffffff;
+  --radius:   12px;
+}
+
+html { scroll-behavior: smooth; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'DM Mono', monospace;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* ── Фоновый эффект ── */
+body::before {
+  content: '';
+  position: fixed; inset: 0;
+  background:
+    radial-gradient(ellipse 800px 600px at 10% 20%, rgba(255,61,90,.06) 0%, transparent 60%),
+    radial-gradient(ellipse 600px 800px at 90% 80%, rgba(0,229,160,.04) 0%, transparent 60%);
+  pointer-events: none; z-index: 0;
+}
+
+/* ── Навбар ── */
+nav {
+  position: sticky; top: 0; z-index: 100;
+  background: rgba(8,8,16,.85);
+  backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--border);
+  padding: 0 24px;
+  display: flex; align-items: center; height: 56px; gap: 16px;
+}
+.logo {
+  font-family: 'Syne', sans-serif;
+  font-weight: 800; font-size: 18px;
+  color: var(--white);
+  letter-spacing: -0.5px;
+}
+.logo span { color: var(--accent); }
+nav .nav-tabs { display: flex; gap: 4px; margin-left: 24px; }
+.nav-tab {
+  padding: 5px 14px; border-radius: 6px;
+  font-size: 12px; cursor: pointer;
+  color: var(--sub); border: none; background: none;
+  font-family: 'DM Mono', monospace;
+  transition: all .2s;
+}
+.nav-tab.active { background: var(--card); color: var(--text); }
+.nav-tab:hover:not(.active) { color: var(--text); }
+.nav-right { margin-left: auto; display: flex; align-items: center; gap: 12px; }
+.badge-pro {
+  background: linear-gradient(135deg, var(--yellow), var(--accent));
+  color: #000; font-size: 9px; font-weight: 700;
+  padding: 3px 8px; border-radius: 4px;
+  font-family: 'Syne', sans-serif; letter-spacing: .5px;
+}
+
+/* ── Лэйаут ── */
+.page { display: none; position: relative; z-index: 1; }
+.page.active { display: block; }
+
+.container { max-width: 1000px; margin: 0 auto; padding: 32px 24px; }
+
+/* ── Карточки кредитов ── */
+.section-title {
+  font-family: 'Syne', sans-serif;
+  font-size: 13px; font-weight: 700;
+  color: var(--sub); letter-spacing: 2px;
+  text-transform: uppercase; margin-bottom: 16px;
+}
+
+.credits-grid { display: grid; gap: 12px; }
+
+.credit-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  transition: border-color .2s, transform .2s;
+  animation: slideUp .4s ease both;
+}
+.credit-card:hover { border-color: var(--sub); transform: translateY(-1px); }
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.credit-card:nth-child(1) { animation-delay: .05s; }
+.credit-card:nth-child(2) { animation-delay: .1s; }
+.credit-card:nth-child(3) { animation-delay: .15s; }
+
+.card-stripe-wrap { display: flex; }
+.card-stripe { width: 4px; flex-shrink: 0; }
+.card-body { padding: 16px 18px; flex: 1; }
+
+.card-top { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 12px; }
+.card-name {
+  font-family: 'Syne', sans-serif;
+  font-size: 14px; font-weight: 700; color: var(--text);
+}
+.card-badge {
+  font-size: 10px; padding: 3px 9px; border-radius: 4px;
+  font-weight: 500;
+}
+.badge-overdue { background: rgba(255,61,90,.15); color: var(--accent); }
+.badge-soon    { background: rgba(255,209,102,.12); color: var(--yellow); }
+.badge-ok      { background: rgba(0,229,160,.1); color: var(--green); }
+
+.card-amounts { display: flex; align-items: baseline; gap: 12px; margin-bottom: 14px; }
+.card-balance {
+  font-family: 'Syne', sans-serif;
+  font-size: 28px; font-weight: 800;
+  color: var(--accent); letter-spacing: -1px; line-height: 1;
+}
+.card-meta { font-size: 11px; color: var(--sub); }
+.card-meta span { color: var(--text); }
+
+.progress-wrap { margin-bottom: 10px; }
+.progress-track {
+  height: 4px; background: var(--border);
+  border-radius: 2px; overflow: hidden; margin-bottom: 6px;
+}
+.progress-fill {
+  height: 100%; border-radius: 2px;
+  transition: width 1s ease;
+}
+.progress-labels { display: flex; justify-content: space-between; font-size: 10px; color: var(--sub); }
+
+.card-footer { display: flex; align-items: center; justify-content: space-between; }
+.card-date { font-size: 11px; color: var(--sub); }
+.pay-btn {
+  background: var(--green); color: #000;
+  font-size: 11px; font-weight: 700;
+  font-family: 'Syne', sans-serif;
+  padding: 7px 16px; border-radius: 6px;
+  border: none; cursor: pointer; letter-spacing: .3px;
+  transition: opacity .15s, transform .1s;
+}
+.pay-btn:hover { opacity: .85; transform: scale(.97); }
+
+/* ── Итого ── */
+.summary-row {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;
+  margin-bottom: 28px;
+}
+.summary-card {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 16px 18px;
+  animation: slideUp .3s ease both;
+}
+.summary-card:nth-child(2) { animation-delay: .05s; }
+.summary-card:nth-child(3) { animation-delay: .1s; }
+.summary-label { font-size: 10px; color: var(--sub); margin-bottom: 6px; letter-spacing: .5px; text-transform: uppercase; }
+.summary-value {
+  font-family: 'Syne', sans-serif;
+  font-size: 22px; font-weight: 800; letter-spacing: -0.5px;
+}
+
+/* ── Кнопка добавить ── */
+.add-btn {
+  width: 100%; padding: 14px;
+  background: transparent; border: 1px dashed var(--border);
+  border-radius: var(--radius); color: var(--sub);
+  font-size: 13px; font-family: 'DM Mono', monospace;
+  cursor: pointer; transition: all .2s; margin-top: 12px;
+}
+.add-btn:hover { border-color: var(--green); color: var(--green); background: rgba(0,229,160,.04); }
+
+/* ── Распределить доход ── */
+.split-card {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 24px;
+  margin-bottom: 28px;
+  animation: slideUp .3s ease both;
+}
+.split-top { display: flex; align-items: center; gap: 16px; margin-bottom: 20px; flex-wrap: wrap; }
+.split-input-wrap { position: relative; flex: 1; min-width: 160px; }
+.split-input-wrap label { font-size: 10px; color: var(--sub); display: block; margin-bottom: 6px; letter-spacing: .5px; text-transform: uppercase; }
+.split-input {
+  width: 100%; background: var(--surface);
+  border: 1px solid var(--border); border-radius: 8px;
+  color: var(--white); font-size: 18px; font-weight: 500;
+  font-family: 'DM Mono', monospace;
+  padding: 10px 14px; outline: none;
+  transition: border-color .2s;
+}
+.split-input:focus { border-color: var(--green); }
+.split-hint {
+  font-size: 11px; color: var(--green);
+  margin-top: 16px; margin-bottom: 16px;
+  min-height: 18px;
+}
+.split-results { display: grid; gap: 8px; }
+.split-row {
+  display: flex; align-items: center;
+  background: var(--surface); border-radius: 8px;
+  padding: 10px 14px; gap: 10px;
+}
+.split-name { flex: 1; font-size: 12px; color: var(--text); font-weight: 500; }
+.split-amount { font-family: 'Syne', sans-serif; font-size: 15px; font-weight: 700; color: var(--green); }
+.split-tag { font-size: 10px; padding: 2px 8px; border-radius: 4px; }
+.tag-avalanche { background: rgba(255,209,102,.12); color: var(--yellow); }
+.tag-min       { background: rgba(90,90,122,.2); color: var(--sub); }
+.tag-overdue   { background: rgba(255,61,90,.12); color: var(--accent); }
+
+.calc-btn {
+  background: var(--accent); color: #fff;
+  font-size: 12px; font-weight: 700;
+  font-family: 'Syne', sans-serif;
+  padding: 10px 20px; border-radius: 8px;
+  border: none; cursor: pointer; letter-spacing: .3px;
+  align-self: flex-end;
+  transition: opacity .15s;
+  white-space: nowrap;
+}
+.calc-btn:hover { opacity: .85; }
+.commit-btn {
+  width: 100%; margin-top: 14px;
+  background: var(--green); color: #000;
+  font-size: 13px; font-weight: 700;
+  font-family: 'Syne', sans-serif;
+  padding: 12px; border-radius: 8px;
+  border: none; cursor: pointer;
+  transition: opacity .15s;
+}
+.commit-btn:hover { opacity: .85; }
+
+/* ── АНАЛИТИКА ── */
+.analytics-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px; }
+.analytics-card {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 20px;
+  animation: slideUp .4s ease both;
+}
+.analytics-card.full { grid-column: 1 / -1; }
+.analytics-card:nth-child(2) { animation-delay: .05s; }
+.analytics-card:nth-child(3) { animation-delay: .1s; }
+.analytics-card:nth-child(4) { animation-delay: .15s; }
+
+.a-label { font-size: 10px; color: var(--sub); letter-spacing: .5px; text-transform: uppercase; margin-bottom: 8px; }
+.a-value {
+  font-family: 'Syne', sans-serif;
+  font-size: 26px; font-weight: 800; letter-spacing: -1px;
+}
+.a-sub { font-size: 11px; color: var(--sub); margin-top: 4px; }
+.a-accent { color: var(--accent); }
+.a-green  { color: var(--green); }
+.a-yellow { color: var(--yellow); }
+.a-purple { color: var(--purple); }
+
+/* ── Слайдер "что если" ── */
+.whatif-card {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 24px;
+  margin-bottom: 24px;
+  animation: slideUp .5s .2s ease both;
+}
+.whatif-title {
+  font-family: 'Syne', sans-serif;
+  font-size: 16px; font-weight: 700; margin-bottom: 6px;
+}
+.whatif-sub { font-size: 11px; color: var(--sub); margin-bottom: 24px; }
+
+.slider-wrap { margin-bottom: 20px; }
+.slider-labels { display: flex; justify-content: space-between; font-size: 10px; color: var(--sub); margin-bottom: 8px; }
+.slider-value {
+  font-family: 'Syne', sans-serif;
+  font-size: 32px; font-weight: 800;
+  color: var(--green); letter-spacing: -1px;
+  margin-bottom: 12px;
+}
+input[type=range] {
+  width: 100%; -webkit-appearance: none;
+  height: 4px; border-radius: 2px;
+  background: var(--border); outline: none;
+  cursor: pointer;
+}
+input[type=range]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 20px; height: 20px; border-radius: 50%;
+  background: var(--green);
+  box-shadow: 0 0 0 4px rgba(0,229,160,.2);
+  cursor: pointer; transition: box-shadow .2s;
+}
+input[type=range]::-webkit-slider-thumb:hover {
+  box-shadow: 0 0 0 8px rgba(0,229,160,.15);
+}
+
+.whatif-results {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;
+}
+.wi-item { text-align: center; }
+.wi-label { font-size: 10px; color: var(--sub); margin-bottom: 6px; text-transform: uppercase; letter-spacing: .5px; }
+.wi-val {
+  font-family: 'Syne', sans-serif;
+  font-size: 18px; font-weight: 800;
+}
+.wi-delta { font-size: 10px; margin-top: 3px; }
+.wi-delta.good { color: var(--green); }
+.wi-delta.bad  { color: var(--accent); }
+
+/* ── График ── */
+.chart-wrap { position: relative; height: 220px; margin-top: 8px; }
+
+/* ── Прогноз по кредитам ── */
+.forecast-list { display: grid; gap: 8px; margin-top: 8px; }
+.forecast-item {
+  display: flex; align-items: center; gap: 12px;
+  background: var(--surface); border-radius: 8px; padding: 12px 14px;
+}
+.forecast-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.forecast-name { flex: 1; font-size: 12px; color: var(--text); }
+.forecast-date { font-size: 11px; color: var(--sub); }
+.forecast-saved { font-size: 11px; color: var(--green); }
+
+/* ── Модалка ── */
+.overlay {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,.7); backdrop-filter: blur(6px);
+  z-index: 200; align-items: center; justify-content: center;
+}
+.overlay.show { display: flex; }
+.modal {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 16px; padding: 28px; width: 340px;
+  animation: slideUp .25s ease;
+}
+.modal-title {
+  font-family: 'Syne', sans-serif;
+  font-size: 16px; font-weight: 700; margin-bottom: 20px;
+}
+.field { margin-bottom: 14px; }
+.field label { font-size: 10px; color: var(--sub); display: block; margin-bottom: 6px; letter-spacing: .5px; text-transform: uppercase; }
+.field input {
+  width: 100%; background: var(--surface);
+  border: 1px solid var(--border); border-radius: 8px;
+  color: var(--white); font-size: 14px;
+  font-family: 'DM Mono', monospace;
+  padding: 10px 12px; outline: none; transition: border-color .2s;
+}
+.field input:focus { border-color: var(--green); }
+.modal-btns { display: flex; gap: 8px; margin-top: 20px; }
+.btn-primary {
+  flex: 1; background: var(--accent); color: #fff;
+  font-size: 12px; font-weight: 700; font-family: 'Syne', sans-serif;
+  padding: 10px; border-radius: 8px; border: none; cursor: pointer;
+}
+.btn-secondary {
+  flex: 1; background: var(--border); color: var(--sub);
+  font-size: 12px; font-family: 'DM Mono', monospace;
+  padding: 10px; border-radius: 8px; border: none; cursor: pointer;
+}
+
+/* ── Pay modal ── */
+.quick-btns { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
+.quick-btn {
+  background: var(--surface); color: var(--blue);
+  font-size: 11px; font-family: 'DM Mono', monospace;
+  padding: 5px 10px; border-radius: 6px; border: 1px solid var(--border);
+  cursor: pointer; transition: background .15s;
+}
+.freq-btn {
+  background: var(--surface); border: 1px solid var(--border);
+  color: var(--sub); font-size: 11px; font-family: 'DM Mono', monospace;
+  padding: 5px 12px; border-radius: 6px; cursor: pointer;
+  transition: all .15s;
+}
+.freq-btn.active { background: var(--card); border-color: var(--green); color: var(--green); }
+.freq-btn:hover:not(.active) { color: var(--text); border-color: var(--sub); }
+
+/* ── Пустое состояние ── */
+.empty {
+  text-align: center; padding: 60px 20px;
+  color: var(--sub); font-size: 13px; line-height: 2;
+}
+.empty-icon { font-size: 40px; margin-bottom: 12px; }
+
+/* ── Адаптив ── */
+@media (max-width: 600px) {
+  .summary-row { grid-template-columns: 1fr 1fr; }
+  .summary-row .summary-card:last-child { grid-column: 1 / -1; }
+  .analytics-grid { grid-template-columns: 1fr; }
+  .analytics-card.full { grid-column: 1; }
+  .whatif-results { grid-template-columns: 1fr; gap: 8px; }
+  .split-top { flex-direction: column; }
+  .calc-btn { width: 100%; }
+}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="logo">Debt<span>Zero</span></div>
+  <div class="nav-tabs">
+    <button class="nav-tab active" onclick="showPage('dashboard')">Долги</button>
+    <button class="nav-tab" onclick="showPage('analytics')">Аналитика</button>
+  </div>
+  <div class="nav-right">
+    <div class="badge-pro" onclick="openPro()" style="cursor:pointer">PRO</div>
+  </div>
+</nav>
+
+<!-- PRO modal -->
+<div class="overlay" id="pro-overlay" onclick="closeModals(event)">
+  <div class="modal" style="width:380px">
+    <div style="text-align:center;margin-bottom:20px">
+      <div style="font-size:28px;margin-bottom:8px">⚡</div>
+      <div style="font-family:'Syne',sans-serif;font-size:20px;font-weight:800;background:linear-gradient(135deg,var(--yellow),var(--accent));-webkit-background-clip:text;-webkit-text-fill-color:transparent">DebtZero PRO</div>
+      <div style="font-size:11px;color:var(--sub);margin-top:4px">Закрой долги быстрее</div>
+    </div>
+    <div style="display:grid;gap:10px;margin-bottom:24px">
+      <div style="display:flex;gap:12px;align-items:flex-start;background:var(--surface);padding:12px;border-radius:8px">
+        <span style="font-size:18px">📊</span>
+        <div><div style="font-size:12px;font-weight:600;color:var(--text);margin-bottom:2px">Аналитика и прогнозы</div><div style="font-size:11px;color:var(--sub)">Слайдер «что если», дата свободы, переплата процентами</div></div>
+      </div>
+      <div style="display:flex;gap:12px;align-items:flex-start;background:var(--surface);padding:12px;border-radius:8px">
+        <span style="font-size:18px">☁️</span>
+        <div><div style="font-size:12px;font-weight:600;color:var(--text);margin-bottom:2px">Синхронизация</div><div style="font-size:11px;color:var(--sub)">Данные на всех устройствах — телефон, компьютер</div></div>
+      </div>
+      <div style="display:flex;gap:12px;align-items:flex-start;background:var(--surface);padding:12px;border-radius:8px">
+        <span style="font-size:18px">🔔</span>
+        <div><div style="font-size:12px;font-weight:600;color:var(--text);margin-bottom:2px">Умные уведомления</div><div style="font-size:11px;color:var(--sub)">Напомним за 3 дня до платежа и если день прошёл без взноса</div></div>
+      </div>
+      <div style="display:flex;gap:12px;align-items:flex-start;background:var(--surface);padding:12px;border-radius:8px;border:1px solid rgba(255,209,102,.2)">
+        <span style="font-size:18px">📱</span>
+        <div><div style="font-size:12px;font-weight:600;color:var(--yellow);margin-bottom:2px">Скоро: автосинхронизация с банком</div><div style="font-size:11px;color:var(--sub)">СМС от банка — баланс обновится сам</div></div>
+      </div>
+    </div>
+    <div style="text-align:center;margin-bottom:16px">
+      <div style="font-family:'Syne',sans-serif;font-size:28px;font-weight:800;color:var(--white)">149 ₽<span style="font-size:14px;color:var(--sub);font-family:'DM Mono',monospace">/мес</span></div>
+      <div style="font-size:10px;color:var(--sub);margin-top:2px">или 990 ₽/год — экономия 800 ₽</div>
+    </div>
+    <button class="btn-primary" style="width:100%;padding:13px;font-size:13px" onclick="closeModals()">Попробовать бесплатно 7 дней</button>
+    <div style="text-align:center;margin-top:10px;font-size:10px;color:var(--sub)">Отменить можно в любой момент</div>
+  </div>
+</div>
+
+<!-- ══════════════════ DASHBOARD ══════════════════ -->
+<div class="page active" id="page-dashboard">
+<div class="container">
+
+  <!-- Итого -->
+  <div class="summary-row" id="summary-row"></div>
+
+  <!-- Распределить доход -->
+  <div class="split-card">
+    <div class="section-title">Распределить доход</div>
+
+    <!-- Переключатель частоты -->
+    <div style="display:flex;gap:6px;margin-bottom:16px">
+      <button class="freq-btn active" onclick="setFreq('daily',this)">Каждый день</button>
+      <button class="freq-btn" onclick="setFreq('twice',this)">2 раза в месяц</button>
+      <button class="freq-btn" onclick="setFreq('monthly',this)">Раз в месяц</button>
+    </div>
+
+    <div class="split-top">
+      <div class="split-input-wrap">
+        <label for-freq>Получил сегодня (₽)</label>
+        <input class="split-input" id="income-input" type="number" placeholder="5000" oninput="updateHint()">
+      </div>
+      <div class="split-input-wrap">
+        <label>На жизнь в день (₽)</label>
+        <input class="split-input" id="budget-input" type="number" placeholder="1500" value="1500" oninput="updateHint()">
+      </div>
+      <button class="calc-btn" onclick="calcSplit()">Рассчитать →</button>
+    </div>
+    <div class="split-hint" id="split-hint"></div>
+    <div class="split-results" id="split-results"></div>
+    <div id="commit-wrap"></div>
+  </div>
+
+  <!-- Кредиты -->
+  <div class="section-title">Мои кредиты</div>
+  <div class="credits-grid" id="credits-grid"></div>
+  <button class="add-btn" onclick="openAddModal()">＋ Добавить кредит</button>
+
+</div>
+</div>
+
+<!-- ══════════════════ ANALYTICS ══════════════════ -->
+<div class="page" id="page-analytics">
+<div class="container">
+
+  <div class="analytics-grid">
+    <div class="analytics-card">
+      <div class="a-label">Переплата процентами</div>
+      <div class="a-value a-accent" id="a-overpay">—</div>
+      <div class="a-sub" id="a-overpay-sub">при текущем темпе</div>
+    </div>
+    <div class="analytics-card">
+      <div class="a-label">Дата свободы</div>
+      <div class="a-value a-green" id="a-freedom">—</div>
+      <div class="a-sub" id="a-freedom-sub">последний долг закроется</div>
+    </div>
+    <div class="analytics-card">
+      <div class="a-label">Средний платёж/день</div>
+      <div class="a-value a-yellow" id="a-avg-day">—</div>
+      <div class="a-sub">за последние 30 дней</div>
+    </div>
+    <div class="analytics-card">
+      <div class="a-label">Уже выплачено</div>
+      <div class="a-value a-purple" id="a-paid-total">—</div>
+      <div class="a-sub" id="a-paid-pct">от общей суммы долгов</div>
+    </div>
+  </div>
+
+  <!-- Что если -->
+  <div class="whatif-card">
+    <div class="whatif-title">Что если платить больше?</div>
+    <div class="whatif-sub">Двигай слайдер — смотри как меняется дата свободы и переплата</div>
+    <div class="slider-wrap">
+      <div class="slider-labels">
+        <span>текущий темп</span>
+        <span>+20 000 ₽/день</span>
+      </div>
+      <div class="slider-value" id="slider-label">+0 ₽/день</div>
+      <input type="range" id="extra-slider" min="0" max="20000" step="500" value="0" oninput="updateWhatIf()">
+    </div>
+    <div class="whatif-results">
+      <div class="wi-item">
+        <div class="wi-label">Закроешь долги</div>
+        <div class="wi-val a-green" id="wi-date">—</div>
+        <div class="wi-delta" id="wi-date-delta"></div>
+      </div>
+      <div class="wi-item">
+        <div class="wi-label">Переплата</div>
+        <div class="wi-val a-accent" id="wi-overpay">—</div>
+        <div class="wi-delta" id="wi-overpay-delta"></div>
+      </div>
+      <div class="wi-item">
+        <div class="wi-label">Экономия</div>
+        <div class="wi-val a-yellow" id="wi-saving">—</div>
+        <div class="wi-delta" id="wi-saving-sub"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- График -->
+  <div class="analytics-card full">
+    <div class="a-label">Динамика долга</div>
+    <div class="chart-wrap">
+      <canvas id="debt-chart"></canvas>
+    </div>
+  </div>
+
+  <!-- Прогноз закрытия -->
+  <div class="analytics-card full" style="margin-top:16px">
+    <div class="a-label">Прогноз закрытия кредитов</div>
+    <div class="forecast-list" id="forecast-list"></div>
+  </div>
+
+</div>
+</div>
+
+<!-- ══ Модалки ══ -->
+<div class="overlay" id="add-overlay" onclick="closeModals(event)">
+  <div class="modal">
+    <div class="modal-title" id="add-modal-title">Новый кредит</div>
+    <div class="field"><label>Название</label><input id="f-name" placeholder="Ипотека, Автокредит..."></div>
+    <div class="field"><label>Остаток долга (₽)</label><input id="f-balance" type="number" placeholder="500000"></div>
+    <div class="field"><label>Мин. платёж (₽/мес)</label><input id="f-monthly" type="number" placeholder="15000"></div>
+    <div class="field"><label>Ставка (% год)</label><input id="f-rate" type="number" placeholder="19.9"></div>
+    <div class="field"><label>Дата след. платежа</label><input id="f-date" placeholder="15.04.2026"></div>
+    <div class="modal-btns">
+      <button class="btn-secondary" onclick="closeModals()">Отмена</button>
+      <button class="btn-primary" id="add-submit-btn" onclick="addCredit()">Добавить</button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="pay-overlay" onclick="closeModals(event)">
+  <div class="modal">
+    <div class="modal-title" id="pay-title">Внести платёж</div>
+    <div class="field">
+      <label>Сумма (₽)</label>
+      <input id="pay-amount" type="number">
+      <div class="quick-btns">
+        <button class="quick-btn" onclick="addPayAmt(500)">+500</button>
+        <button class="quick-btn" onclick="addPayAmt(1000)">+1к</button>
+        <button class="quick-btn" onclick="addPayAmt(2000)">+2к</button>
+        <button class="quick-btn" onclick="addPayAmt(5000)">+5к</button>
+        <button class="quick-btn" onclick="addPayAmt(10000)">+10к</button>
+      </div>
+    </div>
+    <div class="modal-btns">
+      <button class="btn-secondary" onclick="closeModals()">Отмена</button>
+      <button class="btn-primary" onclick="confirmPay()">Внести</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ══ Данные ══
+let credits = [
+  { id:1, name:"Ипотека",        balance:2840000, monthly:28500, rate:11.5, next_date:"12.04.2026", color:"#ff3d5a",
+    history:[
+      {date:"01.03.2026",amount:30000},{date:"02.03.2026",amount:1500},
+      {date:"03.03.2026",amount:2000},{date:"05.03.2026",amount:3500},
+      {date:"06.03.2026",amount:1800},{date:"07.03.2026",amount:2200},
+    ]},
+  { id:2, name:"Автокредит",     balance:312400,  monthly:9800,  rate:17.0, next_date:"20.04.2026", color:"#ffd166",
+    history:[
+      {date:"01.03.2026",amount:10000},{date:"03.03.2026",amount:1000},
+      {date:"05.03.2026",amount:1500},{date:"07.03.2026",amount:800},
+    ]},
+  { id:3, name:"Сплит",          balance:47200,   monthly:5000,  rate:0,    next_date:"",           color:"#ff3d5a",
+    history:[
+      {date:"02.03.2026",amount:3000},{date:"04.03.2026",amount:2000},
+    ]},
+];
+
+let payingIdx = -1;
+let chart = null;
+
+// ══ Навигация ══
+function showPage(id) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('page-'+id).classList.add('active');
+  event.target.classList.add('active');
+  if (id === 'analytics') renderAnalytics();
+}
+
+// ══ Утилиты ══
+function fmt(n) { return Math.round(n).toLocaleString('ru-RU') + ' ₽'; }
+function fmtShort(n) {
+  if (n >= 1000000) return (n/1000000).toFixed(1).replace('.0','') + ' млн ₽';
+  if (n >= 1000) return Math.round(n/1000) + ' тыс ₽';
+  return fmt(n);
+}
+function daysUntil(s) {
+  if (!s) return null;
+  const [d,m,y] = s.split('.');
+  const diff = new Date(+y,+m-1,+d) - new Date();
+  return Math.round(diff/86400000);
+}
+function paidTotal(c) { return c.history.reduce((s,h) => s+h.amount, 0); }
+function paidToday(c) {
+  const t = new Date().toLocaleDateString('ru-RU',{day:'2-digit',month:'2-digit',year:'numeric'}).split('.').join('.');
+  return c.history.filter(h=>h.date===todayStr()).reduce((s,h)=>s+h.amount,0);
+}
+function todayStr() {
+  const d = new Date();
+  return String(d.getDate()).padStart(2,'0')+'.'+String(d.getMonth()+1).padStart(2,'0')+'.'+d.getFullYear();
+}
+
+let incomeFreq = 'daily'; // daily | twice | monthly
+
+function setFreq(f, btn) {
+  incomeFreq = f;
+  document.querySelectorAll('.freq-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  const labels = { daily: 'Получил сегодня (₽)', twice: 'Получил за раз (₽)', monthly: 'Получил за месяц (₽)' };
+  document.querySelector('label[for-freq]').textContent = labels[f];
+  updateHint();
+}
+
+// ══ Рендер дашборда ══
+function render() {
+  renderSummary();
+  renderCredits();
+}
+
+function renderSummary() {
+  const total   = credits.reduce((s,c)=>s+c.balance,0);
+  const monthly = credits.reduce((s,c)=>s+c.monthly,0);
+  const paid    = credits.reduce((s,c)=>s+paidTotal(c),0);
+  document.getElementById('summary-row').innerHTML = `
+    <div class="summary-card">
+      <div class="summary-label">Общий долг</div>
+      <div class="summary-value" style="color:var(--accent)">${fmtShort(total)}</div>
+    </div>
+    <div class="summary-card">
+      <div class="summary-label">Платежи / мес</div>
+      <div class="summary-value" style="color:var(--yellow)">${fmtShort(monthly)}</div>
+    </div>
+    <div class="summary-card">
+      <div class="summary-label">Выплачено</div>
+      <div class="summary-value" style="color:var(--green)">${fmtShort(paid)}</div>
+    </div>`;
+}
+
+function renderCredits() {
+  const grid = document.getElementById('credits-grid');
+  if (!credits.length) {
+    grid.innerHTML = `<div class="empty"><div class="empty-icon">🎉</div>Нет долгов — добавь первый кредит</div>`;
+    return;
+  }
+  grid.innerHTML = credits.map((c,i) => {
+    const days = daysUntil(c.next_date);
+    let badge = '', bclass = '';
+    if (days === null)        { badge = '⚠ просрочен';    bclass = 'badge-overdue'; }
+    else if (days < 0)        { badge = `⚠ просрочен ${-days}д`; bclass = 'badge-overdue'; }
+    else if (days === 0)      { badge = '🔴 сегодня!';    bclass = 'badge-overdue'; }
+    else if (days <= 7)       { badge = `🟡 через ${days}д`; bclass = 'badge-soon'; }
+    else                      { badge = `📅 ${c.next_date||'нет даты'}`; bclass = 'badge-ok'; }
+
+    const pt = paidTotal(c);
+    const orig = c.balance + pt;
+    const pct = orig > 0 ? Math.round(pt/orig*100) : 0;
+    const ptd = paidToday(c);
+
+    return `
+    <div class="credit-card" style="animation-delay:${i*.05}s">
+      <div class="card-stripe-wrap">
+        <div class="card-stripe" style="background:${c.color}"></div>
+        <div class="card-body">
+          <div class="card-top">
+            <div class="card-name">${c.name}</div>
+            <div class="card-badge ${bclass}">${badge}</div>
+          </div>
+          <div class="card-amounts">
+            <div class="card-balance">${fmtShort(c.balance)}</div>
+            <div class="card-meta">мин. <span>${fmt(c.monthly)}</span>/мес${c.rate?` · <span>${c.rate}%</span>`:''}${ptd>0?` · сегодня <span style="color:var(--green)">+${fmt(ptd)}</span>`:''}</div>
+          </div>
+          <div class="progress-wrap">
+            <div class="progress-track">
+              <div class="progress-fill" style="width:${pct}%;background:${c.color}"></div>
+            </div>
+            <div class="progress-labels"><span>выплачено ${pct}%</span><span>${fmt(pt)}</span></div>
+          </div>
+          <div class="card-footer">
+            <div class="card-date">${c.rate ? `ставка ${c.rate}% · ` : ''}${c.next_date||'дата не указана'}</div>
+            <div style="display:flex;gap:8px;align-items:center">
+              <button onclick="editCredit(${i})" style="background:none;border:none;color:var(--sub);font-size:13px;cursor:pointer;padding:4px 6px;line-height:1;transition:color .15s;border-radius:4px" onmouseover="this.style.color='var(--blue)'" onmouseout="this.style.color='var(--sub)'">✏️</button>
+              <button onclick="deleteCredit(${i})" style="background:none;border:none;color:var(--sub);font-size:16px;cursor:pointer;padding:4px 6px;line-height:1;transition:color .15s;border-radius:4px" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--sub)'">✕</button>
+              <button class="pay-btn" onclick="openPay(${i})">Внести</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ══ Распределение ══
+function freqDays() { return incomeFreq==='daily'?1 : incomeFreq==='twice'?15 : 30; }
+
+function updateHint() {
+  const inc = parseFloat(document.getElementById('income-input').value)||0;
+  const bud = parseFloat(document.getElementById('budget-input').value)||0;
+  const days = freqDays();
+  const budForPeriod = bud * days;
+  const on  = Math.max(0, inc - budForPeriod);
+  const hint = document.getElementById('split-hint');
+  const periodLabel = incomeFreq==='daily'?'день' : incomeFreq==='twice'?'15 дней':'месяц';
+  if (inc>0 && bud>0) {
+    hint.textContent = `${fmt(inc)} − ${fmt(budForPeriod)} на жизнь (${fmt(bud)}/день × ${days}) = ${fmt(on)} на долги`;
+    hint.style.color = on>0?'var(--green)':'var(--accent)';
+  } else if (inc>0) {
+    hint.textContent = `Весь доход ${fmt(inc)} идёт на долги`;
+    hint.style.color = 'var(--sub)';
+  } else {
+    hint.textContent = '';
+  }
+}
+
+function calcSplit() {
+  const inc = parseFloat(document.getElementById('income-input').value)||0;
+  const bud = parseFloat(document.getElementById('budget-input').value)||0;
+  const days = freqDays();
+  const toCreds = Math.max(0, inc - bud * days);
+
+  if (toCreds <= 0) {
+    document.getElementById('split-results').innerHTML =
+      `<div style="color:var(--accent);font-size:12px;padding:8px 0">Не хватает даже на жизнь 😬</div>`;
+    document.getElementById('commit-wrap').innerHTML = '';
+    return;
+  }
+
+  const active = credits.map((c,i)=>({i,c})).filter(x=>x.c.balance>0);
+  if (!active.length) return;
+
+  // Лавина
+  const sorted = [...active].sort((a,b) => {
+    const da = daysUntil(a.c.next_date), db = daysUntil(b.c.next_date);
+    const oa = da!==null&&da<0?1:0, ob = db!==null&&db<0?1:0;
+    if (ob!==oa) return ob-oa;
+    return (b.c.rate||0)-(a.c.rate||0);
+  });
+
+  const alloc = {};
+  active.forEach(x=>alloc[x.i]=0);
+  let rem = toCreds;
+
+  sorted.forEach(({i,c}) => {
+    const min = Math.min(c.monthly, c.balance);
+    const give = Math.min(min, rem);
+    alloc[i] += give; rem -= give;
+  });
+  if (rem > 0) {
+    for (const {i,c} of sorted) {
+      const can = c.balance - alloc[i];
+      if (can > 0) { const add=Math.min(can,rem); alloc[i]+=add; rem-=add; }
+      if (rem<=0) break;
+    }
+  }
+
+  const leaderIdx = sorted[0].i;
+  document.getElementById('split-results').innerHTML = sorted.map(({i,c}) => {
+    const amt = alloc[i]||0;
+    if (amt<=0) return '';
+    const days = daysUntil(c.next_date);
+    let tag='', tclass='tag-min';
+    if (days!==null&&days<0) { tag='⚠ просроч.'; tclass='tag-overdue'; }
+    else if (i===leaderIdx&&amt>c.monthly) { tag='↑ лавина'; tclass='tag-avalanche'; }
+    else tag='мин.';
+    return `<div class="split-row">
+      <div style="width:8px;height:8px;border-radius:50%;background:${c.color};flex-shrink:0"></div>
+      <div class="split-name">${c.name}</div>
+      <div class="split-amount">${fmt(amt)}</div>
+      <div class="split-tag ${tclass}">${tag}</div>
+    </div>`;
+  }).join('');
+
+  if (rem>0) {
+    document.getElementById('split-results').innerHTML +=
+      `<div class="split-row" style="opacity:.5">
+        <div style="width:8px;height:8px;border-radius:50%;background:var(--sub);flex-shrink:0"></div>
+        <div class="split-name">Остаток себе</div>
+        <div class="split-amount" style="color:var(--sub)">${fmt(rem)}</div>
+        <div class="split-tag tag-min">не распред.</div>
+      </div>`;
+  }
+
+  // Кнопка внести
+  document.getElementById('commit-wrap').innerHTML =
+    `<button class="commit-btn" onclick="commitSplit(${JSON.stringify(alloc).replace(/"/g,"'")})">✓ Внести всё сразу</button>`;
+}
+
+function commitSplit(alloc) {
+  const today = todayStr();
+  Object.entries(alloc).forEach(([i,amt]) => {
+    amt = parseFloat(amt);
+    if (amt<=0) return;
+    const idx = parseInt(i);
+    const paid = Math.min(amt, credits[idx].balance);
+    credits[idx].balance = Math.round((credits[idx].balance - paid)*100)/100;
+    credits[idx].history.push({date:today, amount:paid});
+  });
+  document.getElementById('split-results').innerHTML = '';
+  document.getElementById('commit-wrap').innerHTML = '';
+  document.getElementById('income-input').value = '';
+  document.getElementById('split-hint').textContent = '';
+  render();
+}
+
+let editingIdx = -1;
+
+function deleteCredit(idx) {
+  credits.splice(idx, 1);
+  render();
+}
+
+function editCredit(idx) {
+  editingIdx = idx;
+  const c = credits[idx];
+  document.getElementById('f-name').value    = c.name;
+  document.getElementById('f-balance').value = c.balance;
+  document.getElementById('f-monthly').value = c.monthly;
+  document.getElementById('f-rate').value    = c.rate||'';
+  document.getElementById('f-date').value    = c.next_date||'';
+  document.getElementById('add-modal-title').textContent = 'Редактировать кредит';
+  document.getElementById('add-submit-btn').textContent  = 'Сохранить';
+  document.getElementById('add-overlay').classList.add('show');
+}
+
+function openPro() {
+  document.getElementById('pro-overlay').classList.add('show');
+}
+
+// ══ Платёж ══
+function openPay(idx) {
+  payingIdx = idx;
+  document.getElementById('pay-title').textContent = `Внести: ${credits[idx].name}`;
+  document.getElementById('pay-amount').value = credits[idx].monthly;
+  document.getElementById('pay-overlay').classList.add('show');
+  setTimeout(()=>document.getElementById('pay-amount').focus(),100);
+}
+function addPayAmt(v) {
+  const el = document.getElementById('pay-amount');
+  el.value = (parseFloat(el.value)||0)+v;
+}
+function confirmPay() {
+  const amt = parseFloat(document.getElementById('pay-amount').value)||0;
+  if (amt<=0) return;
+  const c = credits[payingIdx];
+  const paid = Math.min(amt, c.balance);
+  credits[payingIdx].balance = Math.round((c.balance-paid)*100)/100;
+  credits[payingIdx].history.push({date:todayStr(), amount:paid});
+  closeModals();
+  render();
+  if (credits[payingIdx].balance===0) {
+    setTimeout(()=>alert(`🎉 Кредит «${c.name}» закрыт!`),200);
+  }
+}
+
+// ══ Добавить / редактировать кредит ══
+function openAddModal() {
+  editingIdx = -1;
+  document.getElementById('f-name').value='';
+  document.getElementById('f-balance').value='';
+  document.getElementById('f-monthly').value='';
+  document.getElementById('f-rate').value='';
+  document.getElementById('f-date').value='';
+  document.getElementById('add-modal-title').textContent = 'Новый кредит';
+  document.getElementById('add-submit-btn').textContent  = 'Добавить';
+  document.getElementById('add-overlay').classList.add('show');
+}
+function addCredit() {
+  const name    = document.getElementById('f-name').value.trim();
+  const balance = parseFloat(document.getElementById('f-balance').value)||0;
+  const monthly = parseFloat(document.getElementById('f-monthly').value)||0;
+  const rate    = parseFloat(document.getElementById('f-rate').value)||0;
+  const nd      = document.getElementById('f-date').value.trim();
+  if (!name||!balance) return;
+  const colors = ['#ff3d5a','#ffd166','#00e5a0','#4da8ff','#a78bfa'];
+  if (editingIdx >= 0) {
+    credits[editingIdx] = {...credits[editingIdx], name, balance, monthly, rate, next_date: nd};
+  } else {
+    credits.push({id:Date.now(),name,balance,monthly,rate,next_date:nd,
+      color:colors[credits.length%colors.length],history:[]});
+  }
+  editingIdx = -1;
+  closeModals();
+  render();
+}
+function closeModals(e) {
+  if (e && e.target !== e.currentTarget) return;
+  document.querySelectorAll('.overlay').forEach(o=>o.classList.remove('show'));
+}
+
+// ══ АНАЛИТИКА ══
+function renderAnalytics() {
+  const total   = credits.reduce((s,c)=>s+c.balance,0);
+  const paid    = credits.reduce((s,c)=>s+paidTotal(c),0);
+  const orig    = total+paid;
+  const pct     = orig>0?Math.round(paid/orig*100):0;
+
+  // Средний платёж/день за 30 дней
+  const now = new Date(); const ago30 = new Date(now-30*86400000);
+  let days30sum=0, days30cnt=new Set();
+  credits.forEach(c=>c.history.forEach(h=>{
+    const [d,m,y]=h.date.split('.');
+    const hd=new Date(+y,+m-1,+d);
+    if(hd>=ago30){days30sum+=h.amount;days30cnt.add(h.date);}
+  }));
+  const avgDay = days30cnt.size>0 ? days30sum/days30cnt.size : 0;
+
+  // Переплата и дата свободы при текущем темпе
+  const {overpay, freedomDate} = calcProjection(avgDay||5000, 0);
+
+  document.getElementById('a-overpay').textContent = fmtShort(overpay);
+  document.getElementById('a-freedom').textContent = freedomDate;
+  document.getElementById('a-avg-day').textContent = fmtShort(avgDay||0);
+  document.getElementById('a-paid-total').textContent = fmtShort(paid);
+  document.getElementById('a-paid-pct').textContent = `${pct}% от общей суммы`;
+
+  updateWhatIf();
+  renderChart(avgDay||5000);
+  renderForecast(avgDay||5000);
+}
+
+function calcProjection(dailyPayment, extraPerDay) {
+  const daily = dailyPayment + extraPerDay;
+  // Симуляция по месяцам
+  let totalBal = credits.reduce((s,c)=>s+c.balance,0);
+  let totalOvp = 0;
+  const monthlyDays = 30;
+  let months = 0;
+  const maxMonths = 600;
+
+  // Копируем балансы
+  let bals = credits.map(c=>c.balance);
+  const rates = credits.map(c=>(c.rate||0)/100/12);
+
+  while (bals.some(b=>b>0) && months<maxMonths) {
+    months++;
+    // Начисляем проценты
+    bals = bals.map((b,i)=>{ const interest=b*rates[i]; totalOvp+=interest; return b+interest; });
+    // Платим
+    let pool = daily * monthlyDays;
+    // Лавина
+    const order = bals.map((b,i)=>i).filter(i=>bals[i]>0)
+      .sort((a,b)=>(credits[b].rate||0)-(credits[a].rate||0));
+    // Минималки
+    for (const i of order) {
+      const min = Math.min(credits[i].monthly, bals[i]);
+      const pay = Math.min(min, pool);
+      bals[i] -= pay; pool -= pay;
+    }
+    // Остаток на лидера
+    for (const i of order) {
+      if (bals[i]>0 && pool>0) { const pay=Math.min(bals[i],pool); bals[i]-=pay; pool-=pay; }
+    }
+    bals = bals.map(b=>Math.max(0,b));
+  }
+
+  const fd = new Date();
+  fd.setMonth(fd.getMonth()+months);
+  const freedomDate = months>=maxMonths ? 'никогда' :
+    fd.toLocaleDateString('ru-RU',{month:'long',year:'numeric'});
+
+  return { overpay: totalOvp, freedomDate, months };
+}
+
+function updateWhatIf() {
+  const slider = document.getElementById('extra-slider');
+  const extra  = parseFloat(slider.value)||0;
+
+  // Базовый прогноз
+  const now = new Date(); const ago30 = new Date(now-30*86400000);
+  let days30sum=0, days30cnt=new Set();
+  credits.forEach(c=>c.history.forEach(h=>{
+    const [d,m,y]=h.date.split('.');
+    const hd=new Date(+y,+m-1,+d);
+    if(hd>=ago30){days30sum+=h.amount;days30cnt.add(h.date);}
+  }));
+  const avgDay = days30cnt.size>0 ? days30sum/days30cnt.size : 5000;
+
+  const base = calcProjection(avgDay, 0);
+  const curr = calcProjection(avgDay, extra);
+
+  document.getElementById('slider-label').textContent =
+    extra>0 ? `+${fmt(extra)}/день` : 'текущий темп';
+
+  document.getElementById('wi-date').textContent    = curr.freedomDate;
+  document.getElementById('wi-overpay').textContent = fmtShort(curr.overpay);
+
+  const savedMonths = base.months - curr.months;
+  const savedMoney  = base.overpay - curr.overpay;
+  document.getElementById('wi-saving').textContent  = savedMoney>0 ? fmtShort(savedMoney) : '—';
+
+  const dateDelta = document.getElementById('wi-date-delta');
+  const ovpDelta  = document.getElementById('wi-overpay-delta');
+  const savSub    = document.getElementById('wi-saving-sub');
+
+  if (extra>0 && savedMonths>0) {
+    dateDelta.textContent = `на ${savedMonths} мес раньше`; dateDelta.className='wi-delta good';
+    ovpDelta.textContent  = `−${fmtShort(savedMoney)} переплаты`; ovpDelta.className='wi-delta good';
+    savSub.textContent    = `за счёт лишних ${fmt(extra)}/день`; savSub.className='wi-delta good';
+  } else {
+    dateDelta.textContent=''; ovpDelta.textContent=''; savSub.textContent='';
+  }
+}
+
+function renderChart(avgDay) {
+  const ctx = document.getElementById('debt-chart').getContext('2d');
+  if (chart) chart.destroy();
+
+  // История реальных платежей по месяцам
+  const monthlyPaid = {};
+  credits.forEach(c=>c.history.forEach(h=>{
+    const [d,m,y]=h.date.split('.');
+    const key=`${y}-${m}`;
+    monthlyPaid[key]=(monthlyPaid[key]||0)+h.amount;
+  }));
+
+  // Прогноз — симуляция падения долга
+  let bal = credits.reduce((s,c)=>s+c.balance,0);
+  const labels=[], data=[], dataForecast=[];
+  const now = new Date();
+
+  for (let i=0;i<24;i++) {
+    const d = new Date(now.getFullYear(), now.getMonth()+i, 1);
+    labels.push(d.toLocaleDateString('ru-RU',{month:'short',year:'numeric'}));
+    data.push(i===0?bal:null);
+    // Прогноз
+    if (i>0) {
+      const interest = credits.reduce((s,c)=>s+c.balance*(c.rate||0)/100/12,0);
+      bal = Math.max(0, bal - avgDay*30 + interest);
+    }
+    dataForecast.push(Math.round(bal));
+    if (bal<=0) break;
+  }
+
+  chart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [{
+        label: 'Прогноз долга',
+        data: dataForecast,
+        borderColor: 'rgba(255,61,90,.8)',
+        backgroundColor: 'rgba(255,61,90,.06)',
+        borderWidth: 2, fill: true, tension: 0.4,
+        pointRadius: 0, pointHoverRadius: 4,
+      }]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend:{display:false}, tooltip:{
+        backgroundColor:'#13132a', borderColor:'#1e1e36', borderWidth:1,
+        titleColor:'#e8e8f4', bodyColor:'#5a5a7a',
+        callbacks:{ label: ctx => ' ' + fmtShort(ctx.raw) }
+      }},
+      scales: {
+        x: { grid:{color:'rgba(255,255,255,.04)'}, ticks:{color:'#5a5a7a',font:{size:10}} },
+        y: { grid:{color:'rgba(255,255,255,.04)'}, ticks:{color:'#5a5a7a',font:{size:10},
+          callback: v => fmtShort(v) } }
+      }
+    }
+  });
+}
+
+function renderForecast(avgDay) {
+  const list = document.getElementById('forecast-list');
+  list.innerHTML = credits.map(c => {
+    if (c.balance<=0) return `<div class="forecast-item">
+      <div class="forecast-dot" style="background:${c.color}"></div>
+      <div class="forecast-name">${c.name}</div>
+      <div class="forecast-date" style="color:var(--green)">Погашен ✓</div>
+    </div>`;
+
+    // Упрощённый прогноз для каждого кредита
+    let bal=c.balance, months=0;
+    const monthlyRate=(c.rate||0)/100/12;
+    while(bal>0&&months<600){
+      bal=bal*(1+monthlyRate)-avgDay*30*0.4; // ~40% дохода на этот кредит
+      months++;
+    }
+    const fd=new Date();
+    fd.setMonth(fd.getMonth()+months);
+    const fdStr=months>=600?'неизвестно':fd.toLocaleDateString('ru-RU',{month:'long',year:'numeric'});
+    const ovpApprox=c.balance*(c.rate||0)/100/12*months;
+
+    return `<div class="forecast-item">
+      <div class="forecast-dot" style="background:${c.color}"></div>
+      <div class="forecast-name">${c.name}</div>
+      <div class="forecast-date">${fdStr}</div>
+      ${ovpApprox>0?`<div class="forecast-saved">~${fmtShort(ovpApprox)} переплата</div>`:''}
+    </div>`;
+  }).join('');
+}
+
+// ══ Клавиатура ══
+document.addEventListener('keydown', e=>{
+  if (e.key==='Escape') closeModals();
+  if (e.key==='Enter') {
+    if (document.getElementById('pay-overlay').classList.contains('show')) confirmPay();
+    if (document.getElementById('add-overlay').classList.contains('show')) addCredit();
+  }
+});
+
+// ══ Старт ══
+render();
+</script>
+</body>
+</html>
