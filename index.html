@@ -460,6 +460,38 @@ input[type=range]::-webkit-slider-thumb:hover {
   </div>
 </div>
 
+<!-- ══ Онбординг ══ -->
+<div class="overlay" id="onboard-overlay" style="display:flex;align-items:flex-end;padding-bottom:0">
+  <div id="onboard-modal" style="
+    background:var(--card);border:1px solid var(--border);
+    border-radius:20px 20px 0 0;padding:32px 28px 40px;
+    width:100%;max-width:480px;margin:0 auto;
+    animation:slideUp .35s ease;
+    position:relative;
+  ">
+    <!-- Индикатор шагов -->
+    <div style="display:flex;gap:6px;justify-content:center;margin-bottom:24px" id="onboard-dots"></div>
+
+    <!-- Контент шага -->
+    <div id="onboard-content"></div>
+
+    <!-- Кнопки -->
+    <div style="display:flex;gap:10px;margin-top:28px">
+      <button id="onboard-skip" onclick="finishOnboard()" style="
+        flex:1;background:transparent;border:1px solid var(--border);
+        color:var(--sub);font-size:12px;font-family:'DM Mono',monospace;
+        padding:11px;border-radius:8px;cursor:pointer;
+      ">Пропустить</button>
+      <button id="onboard-next" onclick="nextOnboard()" style="
+        flex:2;background:var(--accent);color:#fff;
+        font-size:13px;font-weight:700;font-family:'Syne',sans-serif;
+        padding:11px;border-radius:8px;border:none;cursor:pointer;
+        letter-spacing:.3px;
+      ">Далее →</button>
+    </div>
+  </div>
+</div>
+
 <!-- ══════════════════ DASHBOARD ══════════════════ -->
 <div class="page active" id="page-dashboard">
 <div class="container">
@@ -1165,6 +1197,88 @@ document.addEventListener('keydown', e=>{
     if (document.getElementById('pay-overlay').classList.contains('show')) confirmPay();
     if (document.getElementById('add-overlay').classList.contains('show')) addCredit();
   }
+});
+
+// ══ Онбординг ══
+const ONBOARD_STEPS = [
+  {
+    icon: '👋',
+    title: 'Привет! Это DebtZero',
+    text: 'Приложение помогает гасить кредиты быстрее — видишь все долги в одном месте и каждый день знаешь куда кинуть деньги.',
+    accent: false
+  },
+  {
+    icon: '💳',
+    title: 'Добавь свои кредиты',
+    text: 'Тестовые кредиты можно удалить крестиком ✕ на карточке. Потом нажми «＋ Добавить кредит» и введи свои — название, остаток долга, ежемесячный платёж и ставку.',
+    accent: false
+  },
+  {
+    icon: '₽',
+    title: 'Получил деньги — распредели',
+    text: 'Нажми кнопку «Рассчитать» в блоке «Распределить доход». Введи сколько получил и сколько тратишь в день на жизнь. Приложение само скажет сколько кинуть на каждый долг по методу лавины — сначала самый дорогой.',
+    accent: false
+  },
+  {
+    icon: '📊',
+    title: 'Аналитика — это главное',
+    text: 'Открой вкладку «Аналитика» и подвигай слайдер «Что если». Увидишь: если платить на 1 000 ₽ в день больше — закроешь долги на несколько месяцев раньше и сэкономишь десятки тысяч на процентах.',
+    accent: true
+  },
+];
+
+let onboardStep = 0;
+
+function renderOnboard() {
+  const step = ONBOARD_STEPS[onboardStep];
+  const total = ONBOARD_STEPS.length;
+
+  // Точки
+  document.getElementById('onboard-dots').innerHTML = ONBOARD_STEPS.map((_,i) =>
+    `<div style="width:${i===onboardStep?20:6}px;height:6px;border-radius:3px;background:${i===onboardStep?'var(--accent)':'var(--border)'};transition:all .3s"></div>`
+  ).join('');
+
+  // Контент
+  document.getElementById('onboard-content').innerHTML = `
+    <div style="font-size:40px;margin-bottom:16px;text-align:center">${step.icon}</div>
+    <div style="font-family:'Syne',sans-serif;font-size:20px;font-weight:800;
+      color:${step.accent?'var(--accent)':'var(--white)'};
+      margin-bottom:12px;line-height:1.3;text-align:center">${step.title}</div>
+    <div style="font-size:13px;color:var(--sub);line-height:1.7;text-align:center">${step.text}</div>
+  `;
+
+  // Последний шаг
+  const nextBtn = document.getElementById('onboard-next');
+  const skipBtn = document.getElementById('onboard-skip');
+  if (onboardStep === total - 1) {
+    nextBtn.textContent = '🚀 Начать';
+    nextBtn.style.background = 'var(--green)';
+    nextBtn.style.color = '#000';
+    skipBtn.style.display = 'none';
+  } else {
+    nextBtn.textContent = 'Далее →';
+    nextBtn.style.background = 'var(--accent)';
+    nextBtn.style.color = '#fff';
+    skipBtn.style.display = 'block';
+  }
+}
+
+function nextOnboard() {
+  if (onboardStep < ONBOARD_STEPS.length - 1) {
+    onboardStep++;
+    renderOnboard();
+  } else {
+    finishOnboard();
+  }
+}
+
+function finishOnboard() {
+  document.getElementById('onboard-overlay').style.display = 'none';
+}
+
+// Показываем онбординг при загрузке
+window.addEventListener('load', () => {
+  renderOnboard();
 });
 
 // ══ Старт ══
