@@ -750,11 +750,11 @@ input[type=range]::-webkit-slider-thumb:hover {
     <div class="whatif-sub">Двигай слайдер — смотри как меняется дата свободы и переплата</div>
     <div class="slider-wrap">
       <div class="slider-labels">
-        <span>текущий темп</span>
-        <span>+20 000 ₽/день</span>
+        <span>100 ₽/день</span>
+        <span>5 000 ₽/день</span>
       </div>
-      <div class="slider-value" id="slider-label">+0 ₽/день</div>
-      <input type="range" id="extra-slider" min="0" max="20000" step="500" value="0" oninput="updateWhatIf()">
+      <div class="slider-value" id="slider-label">100 ₽/день</div>
+      <input type="range" id="extra-slider" min="100" max="5000" step="50" value="100" oninput="updateWhatIf()">
     </div>
     <div class="whatif-results">
       <div class="wi-item">
@@ -1422,33 +1422,39 @@ function calcProjection(dailyPayment, extraPerDay) {
 }
 
 function updateWhatIf() {
-  const slider = document.getElementById('extra-slider');
-  const extra  = parseFloat(slider.value)||0;
+  const slider  = document.getElementById('extra-slider');
+  const dailyAmt = parseFloat(slider.value) || 100;
   const { avg: avgDay } = getAvgDay();
 
+  // Базовый прогноз — по минималкам/текущему темпу
   const base = calcProjection(avgDay, 0);
-  const curr = calcProjection(avgDay, extra);
+  // Прогноз по выбранной сумме в день (абсолютной)
+  const curr = calcProjection(dailyAmt, 0);
 
-  document.getElementById('slider-label').textContent =
-    extra>0 ? `+${fmt(extra)}/день` : 'текущий темп';
+  // Подпись слайдера
+  document.getElementById('slider-label').textContent = `${fmt(dailyAmt)}/день`;
 
   document.getElementById('wi-date').textContent    = curr.freedomDate;
   document.getElementById('wi-overpay').textContent = fmtShort(curr.overpay);
 
   const savedMonths = base.months - curr.months;
   const savedMoney  = base.overpay - curr.overpay;
-  document.getElementById('wi-saving').textContent  = savedMoney>0 ? fmtShort(savedMoney) : '—';
 
-  const dateDelta = document.getElementById('wi-date-delta');
-  const ovpDelta  = document.getElementById('wi-overpay-delta');
-  const savSub    = document.getElementById('wi-saving-sub');
+  document.getElementById('wi-saving').textContent = savedMoney > 0 ? fmtShort(savedMoney) : '—';
 
-  if (extra>0 && savedMonths>0) {
-    dateDelta.textContent = `на ${savedMonths} мес раньше`; dateDelta.className='wi-delta good';
-    ovpDelta.textContent  = `−${fmtShort(savedMoney)} переплаты`; ovpDelta.className='wi-delta good';
-    savSub.textContent    = `за счёт лишних ${fmt(extra)}/день`; savSub.className='wi-delta good';
+  const dateDelta  = document.getElementById('wi-date-delta');
+  const ovpDelta   = document.getElementById('wi-overpay-delta');
+  const savSub     = document.getElementById('wi-saving-sub');
+
+  if (savedMonths > 0) {
+    dateDelta.textContent = `на ${savedMonths} мес раньше`; dateDelta.className = 'wi-delta good';
+    ovpDelta.textContent  = `−${fmtShort(Math.abs(savedMoney))} переплаты`; ovpDelta.className = 'wi-delta good';
+    savSub.textContent    = `vs оплата минимума`; savSub.className = 'wi-delta good';
+  } else if (savedMonths === 0) {
+    dateDelta.textContent = 'быстрее уже не выйдет'; dateDelta.className = 'wi-delta good';
+    ovpDelta.textContent  = ''; savSub.textContent = '';
   } else {
-    dateDelta.textContent=''; ovpDelta.textContent=''; savSub.textContent='';
+    dateDelta.textContent = ''; ovpDelta.textContent = ''; savSub.textContent = '';
   }
 }
 
