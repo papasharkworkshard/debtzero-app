@@ -1332,34 +1332,50 @@ function closeModals(e) {
 }
 
 // ══ АНАЛИТИКА ══
-function renderAnalytics() {
-  const total   = credits.reduce((s,c)=>s+c.balance,0);
-  const totalInitial = credits.reduce((s,c)=>s+(c.initial||c.balance),0);
-  const paid    = totalInitial - total;
-  const pct     = totalInitial>0?Math.round(paid/totalInitial*100):0;
-
-  // Средний платёж/день за 30 дней
-  const now = new Date(); const ago30 = new Date(now-30*86400000);
-  let days30sum=0, days30cnt=new Set();
-  credits.forEach(c=>c.history.forEach(h=>{
-    const [d,m,y]=h.date.split('.');
-    const hd=new Date(+y,+m-1,+d);
-    if(hd>=ago30){days30sum+=h.amount;days30cnt.add(h.date);}
+function getAvgDay() {
+  // Считаем средний платёж/день за последние 30 дней по реальной истории
+  const now = new Date(); const ago30 = new Date(now - 30*86400000);
+  let sum = 0; const dates = new Set();
+  credits.forEach(c => c.history.forEach(h => {
+    const [d,m,y] = h.date.split('.');
+    const hd = new Date(+y, +m-1, +d);
+    if (hd >= ago30) { sum += h.amount; dates.add(h.date); }
   }));
-  const avgDay = days30cnt.size>0 ? days30sum/days30cnt.size : 0;
+  if (dates.size >= 3) return { avg: sum / dates.size, reliable: true };
 
-  // Переплата и дата свободы при текущем темпе
-  const {overpay, freedomDate} = calcProjection(avgDay||5000, 0);
+  // Недостаточно данных — берём сумму минималок / 30
+  const minMonthly = credits.reduce((s,c) => s + (c.monthly || 0), 0);
+  return { avg: minMonthly / 30, reliable: false };
+}
+
+function renderAnalytics() {
+  const total      = credits.reduce((s,c)=>s+c.balance,0);
+  const totalInit  = credits.reduce((s,c)=>s+(c.initial||c.balance),0);
+  const paid       = totalInit - total;
+  const pct        = totalInit>0 ? Math.round(paid/totalInit*100) : 0;
+
+  const { avg: avgDay, reliable } = getAvgDay();
+
+  // Переплата и дата свободы
+  const {overpay, freedomDate} = calcProjection(avgDay, 0);
 
   document.getElementById('a-overpay').textContent = fmtShort(overpay);
+  document.getElementById('a-overpay-sub').textContent = reliable
+    ? 'при текущем темпе'
+    : 'при оплате минимума';
+
   document.getElementById('a-freedom').textContent = freedomDate;
-  document.getElementById('a-avg-day').textContent = fmtShort(avgDay||0);
+  document.getElementById('a-freedom-sub').textContent = reliable
+    ? 'последний долг закроется'
+    : '⚠ мало данных — прогноз по минималкам';
+
+  document.getElementById('a-avg-day').textContent = fmtShort(avgDay);
   document.getElementById('a-paid-total').textContent = fmtShort(paid);
   document.getElementById('a-paid-pct').textContent = `${pct}% от общей суммы`;
 
   updateWhatIf();
-  renderChart(avgDay||5000);
-  renderForecast(avgDay||5000);
+  renderChart();
+  renderForecast();
 }
 
 function calcProjection(dailyPayment, extraPerDay) {
@@ -1408,16 +1424,7 @@ function calcProjection(dailyPayment, extraPerDay) {
 function updateWhatIf() {
   const slider = document.getElementById('extra-slider');
   const extra  = parseFloat(slider.value)||0;
-
-  // Базовый прогноз
-  const now = new Date(); const ago30 = new Date(now-30*86400000);
-  let days30sum=0, days30cnt=new Set();
-  credits.forEach(c=>c.history.forEach(h=>{
-    const [d,m,y]=h.date.split('.');
-    const hd=new Date(+y,+m-1,+d);
-    if(hd>=ago30){days30sum+=h.amount;days30cnt.add(h.date);}
-  }));
-  const avgDay = days30cnt.size>0 ? days30sum/days30cnt.size : 5000;
+  const { avg: avgDay } = getAvgDay();
 
   const base = calcProjection(avgDay, 0);
   const curr = calcProjection(avgDay, extra);
@@ -1445,7 +1452,8 @@ function updateWhatIf() {
   }
 }
 
-function renderChart(avgDay) {
+function renderChart() {
+  const { avg: avgDay } = getAvgDay();
   const ctx = document.getElementById('debt-chart').getContext('2d');
   if (chart) chart.destroy();
 
@@ -1504,7 +1512,8 @@ function renderChart(avgDay) {
   });
 }
 
-function renderForecast(avgDay) {
+function renderForecast() {
+  const { avg: avgDay } = getAvgDay();
   const list = document.getElementById('forecast-list');
   list.innerHTML = credits.map(c => {
     if (c.balance<=0) return `<div class="forecast-item">
