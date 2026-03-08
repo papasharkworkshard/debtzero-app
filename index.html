@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>DebtZero — убиваем долги</title>
-<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@400;500&family=Bebas+Neue&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
@@ -400,7 +400,131 @@ input[type=range]::-webkit-slider-thumb:hover {
 }
 .empty-icon { font-size: 40px; margin-bottom: 12px; }
 
-/* ── Адаптив ── */
+/* ── HERO экран ── */
+.hero-page { max-width: 480px; margin: 0 auto; padding: 24px 20px 40px; }
+
+.hero-topbar {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 28px;
+}
+.streak-badge {
+  display: flex; align-items: center; gap: 6px;
+  background: rgba(255,209,102,.1);
+  border: 1px solid rgba(255,209,102,.2);
+  border-radius: 20px; padding: 5px 14px;
+}
+.streak-text { font-size: 13px; font-weight: 600; color: var(--yellow); font-family: 'Syne', sans-serif; }
+
+.ring-wrap {
+  position: relative; width: 220px; height: 220px;
+  margin: 0 auto 16px;
+}
+.ring-svg { transform: rotate(-90deg); }
+.ring-track { fill: none; stroke: var(--border); stroke-width: 10; }
+.ring-fill {
+  fill: none; stroke: var(--accent); stroke-width: 10;
+  stroke-linecap: round;
+  stroke-dasharray: 628;
+  stroke-dashoffset: 628;
+  filter: drop-shadow(0 0 10px rgba(255,61,90,.5));
+  transition: stroke-dashoffset 1.2s cubic-bezier(.4,0,.2,1);
+}
+.ring-center {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 2px;
+}
+.ring-pct {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 52px; color: var(--white); line-height: 1; letter-spacing: 1px;
+}
+.ring-pct-label { font-size: 10px; color: var(--sub); letter-spacing: 2px; text-transform: uppercase; }
+
+.hero-amount-wrap { text-align: center; margin-bottom: 8px; }
+.hero-lbl { font-size: 10px; color: var(--sub); letter-spacing: 2px; text-transform: uppercase; margin-bottom: 6px; }
+.hero-num {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 64px; line-height: 1; letter-spacing: -1px;
+  color: var(--white);
+}
+.hero-num .rub { font-size: 32px; color: var(--sub); vertical-align: super; margin-right: 2px; }
+.hero-delta-badge {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: rgba(0,229,160,.1); border: 1px solid rgba(0,229,160,.2);
+  border-radius: 20px; padding: 5px 14px; margin-top: 8px;
+  font-size: 12px; font-weight: 600; color: var(--green);
+  font-family: 'Syne', sans-serif;
+}
+
+.today-block {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 16px; padding: 16px 20px;
+  display: flex; align-items: center; gap: 16px;
+  margin-bottom: 20px;
+}
+.today-ico {
+  width: 46px; height: 46px; border-radius: 12px;
+  background: rgba(0,229,160,.1);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 22px; flex-shrink: 0;
+}
+.today-info { flex: 1; }
+.today-lbl { font-size: 10px; color: var(--sub); margin-bottom: 4px; letter-spacing: .5px; text-transform: uppercase; }
+.today-amt {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 28px; color: var(--green); line-height: 1;
+}
+.today-msg { font-size: 11px; color: var(--sub); margin-top: 3px; }
+
+.hero-credits-mini { margin-bottom: 20px; }
+.hero-credits-mini .section-row {
+  display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;
+}
+.hero-credits-mini .section-lbl { font-size: 10px; color: var(--sub); letter-spacing: 1.5px; text-transform: uppercase; font-family: 'DM Mono', monospace; }
+.hero-credits-mini .section-link { font-size: 11px; color: var(--accent); cursor: pointer; }
+
+.mini-cred {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 10px; padding: 12px 14px;
+  display: flex; align-items: center; gap: 10px; margin-bottom: 8px;
+  cursor: pointer; transition: border-color .15s;
+}
+.mini-cred:hover { border-color: var(--sub); }
+.mini-cred-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+.mini-cred-name { flex: 1; font-size: 13px; color: var(--text); font-weight: 500; }
+.mini-cred-right { text-align: right; }
+.mini-cred-bal {
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 16px; color: var(--accent); line-height: 1;
+}
+.mini-cred-bar { width: 56px; height: 3px; background: var(--border); border-radius: 2px; overflow: hidden; margin-top: 4px; margin-left: auto; }
+.mini-cred-fill { height: 100%; border-radius: 2px; }
+
+.hero-cta {
+  width: 100%; padding: 18px;
+  background: var(--accent); border: none; border-radius: 16px;
+  font-family: 'Bebas Neue', sans-serif;
+  font-size: 24px; letter-spacing: 1px;
+  color: var(--white); cursor: pointer;
+  box-shadow: 0 8px 32px rgba(255,61,90,.3);
+  transition: transform .15s, box-shadow .15s, background .3s;
+  position: relative; overflow: hidden;
+}
+.hero-cta::after {
+  content: '';
+  position: absolute; inset: 0;
+  background: linear-gradient(135deg, rgba(255,255,255,.12) 0%, transparent 50%);
+}
+.hero-cta:hover { transform: translateY(-2px); box-shadow: 0 12px 40px rgba(255,61,90,.4); }
+.hero-cta:active { transform: scale(.98); }
+.hero-cta-sub { text-align: center; font-size: 11px; color: var(--sub); margin-top: 10px; font-family: 'DM Mono', monospace; }
+
+@keyframes numPop {
+  0%   { transform: scale(1.05); color: var(--green); }
+  100% { transform: scale(1);    color: var(--white); }
+}
+.num-pop { animation: numPop .5s ease; }
+
 @media (max-width: 600px) {
   .summary-row { grid-template-columns: 1fr 1fr; }
   .summary-row .summary-card:last-child { grid-column: 1 / -1; }
@@ -417,7 +541,8 @@ input[type=range]::-webkit-slider-thumb:hover {
 <nav>
   <div class="logo">Debt<span>Zero</span></div>
   <div class="nav-tabs">
-    <button class="nav-tab active" onclick="showPage('dashboard')">Долги</button>
+    <button class="nav-tab active" onclick="showPage('home')">Главная</button>
+    <button class="nav-tab" onclick="showPage('dashboard')">Долги</button>
     <button class="nav-tab" onclick="showPage('analytics')">Аналитика</button>
   </div>
   <div class="nav-right">
@@ -490,6 +615,64 @@ input[type=range]::-webkit-slider-thumb:hover {
       ">Далее →</button>
     </div>
   </div>
+</div>
+
+<!-- ══════════════════ HOME ══════════════════ -->
+<div class="page active" id="page-home">
+<div class="hero-page">
+
+  <!-- Топбар -->
+  <div class="hero-topbar">
+    <div style="font-size:13px;color:var(--sub);font-family:'DM Mono',monospace" id="hero-date"></div>
+    <div class="streak-badge">
+      <span style="font-size:15px">🔥</span>
+      <span class="streak-text" id="hero-streak">0 дней</span>
+    </div>
+  </div>
+
+  <!-- Кольцо + сумма -->
+  <div style="text-align:center;margin-bottom:20px">
+    <div class="ring-wrap">
+      <svg class="ring-svg" width="220" height="220" viewBox="0 0 220 220">
+        <circle class="ring-track" cx="110" cy="110" r="100"/>
+        <circle class="ring-fill" id="hero-ring" cx="110" cy="110" r="100"/>
+      </svg>
+      <div class="ring-center">
+        <div class="ring-pct" id="hero-pct">0%</div>
+        <div class="ring-pct-label">выплачено</div>
+      </div>
+    </div>
+    <div class="hero-amount-wrap">
+      <div class="hero-lbl">Осталось погасить</div>
+      <div class="hero-num"><span class="rub">₽</span><span id="hero-total">0</span></div>
+      <div id="hero-delta-wrap" style="margin-top:8px"></div>
+    </div>
+  </div>
+
+  <!-- Сегодня -->
+  <div class="today-block">
+    <div class="today-ico">💸</div>
+    <div class="today-info">
+      <div class="today-lbl">Внесено сегодня</div>
+      <div class="today-amt" id="hero-today-amt">0 ₽</div>
+      <div class="today-msg" id="hero-today-msg">Нажми кнопку ниже чтобы внести</div>
+    </div>
+  </div>
+
+  <!-- Мини-список кредитов -->
+  <div class="hero-credits-mini">
+    <div class="section-row">
+      <div class="section-lbl">Кредиты</div>
+      <div class="section-link" onclick="switchToDebts()">все →</div>
+    </div>
+    <div id="hero-credits-list"></div>
+  </div>
+
+  <!-- Главная кнопка -->
+  <button class="hero-cta" id="hero-cta-btn" onclick="heroCtaClick()">ВНЕСТИ СЕГОДНЯ</button>
+  <div class="hero-cta-sub" id="hero-cta-sub">каждый день приближает свободу</div>
+
+</div>
 </div>
 
 <!-- ══════════════════ DASHBOARD ══════════════════ -->
@@ -676,6 +859,14 @@ function showPage(id) {
   document.getElementById('page-'+id).classList.add('active');
   event.target.classList.add('active');
   if (id === 'analytics') renderAnalytics();
+  if (id === 'home') renderHero();
+}
+
+function switchToDebts() {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('page-dashboard').classList.add('active');
+  document.querySelectorAll('.nav-tab')[1].classList.add('active');
 }
 
 // ══ Утилиты ══
@@ -716,6 +907,128 @@ function setFreq(f, btn) {
 function render() {
   renderSummary();
   renderCredits();
+  renderHero();
+}
+
+// ══ Рендер Hero-экрана ══
+function renderHero() {
+  const total  = credits.reduce((s,c) => s+c.balance, 0);
+  const paid   = credits.reduce((s,c) => s+paidTotal(c), 0);
+  const orig   = total + paid;
+  const pct    = orig > 0 ? Math.round(paid / orig * 100) : 0;
+  const todayAmt = credits.reduce((s,c) => s+paidToday(c), 0);
+
+  // Дата
+  const now = new Date();
+  document.getElementById('hero-date').textContent =
+    now.toLocaleDateString('ru-RU', {weekday:'long', day:'numeric', month:'long'});
+
+  // Стрик — считаем сколько дней подряд были платежи
+  const allDates = new Set();
+  credits.forEach(c => c.history.forEach(h => allDates.add(h.date)));
+  let streak = 0;
+  for (let i = 0; i < 365; i++) {
+    const d = new Date(now); d.setDate(d.getDate() - i);
+    const ds = String(d.getDate()).padStart(2,'0') + '.' +
+               String(d.getMonth()+1).padStart(2,'0') + '.' + d.getFullYear();
+    if (allDates.has(ds)) streak++;
+    else if (i > 0) break;
+  }
+  document.getElementById('hero-streak').textContent = `${streak} ${streakWord(streak)}`;
+
+  // Кольцо
+  const circumference = 628;
+  const offset = circumference - (circumference * pct / 100);
+  const ring = document.getElementById('hero-ring');
+  setTimeout(() => { ring.style.strokeDashoffset = offset; }, 300);
+  document.getElementById('hero-pct').textContent = pct + '%';
+
+  // Сумма с анимацией
+  const totalEl = document.getElementById('hero-total');
+  const prevVal = parseInt(totalEl.textContent.replace(/\s/g,'')) || total;
+  animateNum(totalEl, prevVal, total, 700);
+
+  // Дельта сегодня
+  const deltaWrap = document.getElementById('hero-delta-wrap');
+  if (todayAmt > 0) {
+    deltaWrap.innerHTML = `<div class="hero-delta-badge">▼ −${fmt(todayAmt)} сегодня</div>`;
+  } else {
+    deltaWrap.innerHTML = '';
+  }
+
+  // Сегодня
+  document.getElementById('hero-today-amt').textContent = fmt(todayAmt);
+  const msgs = [
+    'Нажми кнопку ниже чтобы внести',
+    '🔥 Продолжай в том же духе!',
+    '💪 Отличный темп!',
+    '🚀 Ты быстрее графика!',
+    '⚡ Каждый рубль считается!',
+  ];
+  if (todayAmt === 0) {
+    document.getElementById('hero-today-msg').textContent = msgs[0];
+  } else if (streak >= 7) {
+    document.getElementById('hero-today-msg').textContent = `🔥 ${streak} дней подряд — не останавливайся!`;
+  } else {
+    document.getElementById('hero-today-msg').textContent = msgs[Math.min(streak, msgs.length-1)];
+  }
+
+  // Мини-список кредитов
+  document.getElementById('hero-credits-list').innerHTML = credits.slice(0,3).map((c,i) => {
+    const pt = paidTotal(c);
+    const o  = c.balance + pt;
+    const p  = o > 0 ? Math.round(pt/o*100) : 0;
+    return `<div class="mini-cred" onclick="switchToDebts()">
+      <div class="mini-cred-dot" style="background:${c.color}"></div>
+      <div class="mini-cred-name">${c.name}</div>
+      <div class="mini-cred-right">
+        <div class="mini-cred-bal">${fmtShort(c.balance)}</div>
+        <div class="mini-cred-bar"><div class="mini-cred-fill" style="width:${p}%;background:${c.color}"></div></div>
+      </div>
+    </div>`;
+  }).join('');
+
+  // Кнопка
+  const btn = document.getElementById('hero-cta-btn');
+  const sub = document.getElementById('hero-cta-sub');
+  if (total <= 0) {
+    btn.textContent = '🎉 ВСЕ ДОЛГИ ЗАКРЫТЫ!';
+    btn.style.background = 'var(--green)';
+    btn.style.color = '#000';
+    sub.textContent = 'Ты справился — это победа!';
+  } else if (todayAmt > 0) {
+    btn.textContent = 'ВНЕСТИ ЕЩЁ';
+    sub.textContent = `уже внесено ${fmt(todayAmt)} сегодня`;
+  } else {
+    btn.textContent = 'ВНЕСТИ СЕГОДНЯ';
+    sub.textContent = 'каждый день приближает свободу';
+  }
+}
+
+function streakWord(n) {
+  if (n % 100 >= 11 && n % 100 <= 19) return 'дней';
+  const r = n % 10;
+  if (r === 1) return 'день';
+  if (r >= 2 && r <= 4) return 'дня';
+  return 'дней';
+}
+
+function animateNum(el, from, to, dur) {
+  const start = Date.now();
+  el.classList.add('num-pop');
+  const t = setInterval(() => {
+    const p = Math.min((Date.now()-start)/dur, 1);
+    const ease = 1 - Math.pow(1-p, 3);
+    el.textContent = Math.round(from + (to-from)*ease).toLocaleString('ru-RU');
+    if (p >= 1) { clearInterval(t); el.classList.remove('num-pop'); }
+  }, 16);
+}
+
+function heroCtaClick() {
+  if (credits.length === 0) { switchToDebts(); return; }
+  // Открываем платёж по первому активному кредиту
+  const idx = credits.findIndex(c => c.balance > 0);
+  if (idx >= 0) openPay(idx);
 }
 
 function renderSummary() {
@@ -1283,6 +1596,7 @@ window.addEventListener('load', () => {
 
 // ══ Старт ══
 render();
+renderHero();
 </script>
 </body>
 </html>
